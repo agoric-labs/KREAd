@@ -70,14 +70,13 @@ export const bootstrapContext = async (conf) => {
   };
 
   // Start contract instance
-  const instance = await E(zoe).startInstance(
+  const { instance, publicFacet } = await E(zoe).startInstance(
     installation,
     { Money: issuerMockIST },
     undefined,
     harden(privateArgs),
   );
-  const { creatorFacet } = instance;
-  const terms = await E(zoe).getTerms(instance.instance);
+  const terms = await E(zoe).getTerms(instance);
   await E(creatorFacet).initializeBaseAssets(defaultCharacters, defaultItems);
 
   const {
@@ -99,7 +98,7 @@ export const bootstrapContext = async (conf) => {
   const result = {
     contractAssets,
     assets,
-    instance,
+    publicFacet,
     purses,
     zoe,
     paymentAsset: {

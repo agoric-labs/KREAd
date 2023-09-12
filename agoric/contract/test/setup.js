@@ -27,7 +27,7 @@ harden(setupZoe);
 export const addCharacterToBootstrap = async (bootstrap) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     paymentAsset,
     purses,
     zoe,
@@ -68,7 +68,7 @@ harden(addCharacterToBootstrap);
 export const addItemToBootstrap = async (bootstrap, item) => {
   /** @type {Bootstrap} */
   const {
-    instance: { creatorFacet, publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,

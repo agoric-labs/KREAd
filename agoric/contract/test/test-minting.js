@@ -9,7 +9,7 @@ import { makeCopyBag } from '@agoric/store';
 import { errors } from '../src/errors.js';
 
 test.before(async (t) => {
-  const { zoe, contractAssets, assets, purses, instance, paymentAsset } =
+  const { zoe, contractAssets, assets, purses, publicFacet, paymentAsset } =
     await bootstrapContext();
 
   const alice = makeKreadUser('alice', {
@@ -23,7 +23,7 @@ test.before(async (t) => {
   alice.depositPayment(payout);
 
   t.context = {
-    instance,
+    publicFacet,
     contractAssets,
     assets,
     purses,
@@ -36,7 +36,7 @@ test.before(async (t) => {
 test.serial('--| MINT - Too Long Name', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     zoe,
   } = t.context;
@@ -70,7 +70,7 @@ test.serial('--| MINT - Too Long Name', async (t) => {
 test.serial('--| MINT - Invalid Chars in Name', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     zoe,
   } = t.context;
@@ -228,7 +228,7 @@ test.serial('--| MINT - No offerArgs', async (t) => {
 test.serial('--| MINT - Duplicate Name', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     paymentAsset,
     users: { alice },
     zoe,
@@ -266,7 +266,7 @@ test.serial('--| MINT - Duplicate Name', async (t) => {
 test.serial('--| MINT - No name', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     paymentAsset,
     users: { alice },
     zoe,
@@ -342,7 +342,7 @@ test.serial('--| MINT - No characters available', async (t) => {
 test.serial('--| MINT - Inventory check', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
   } = t.context;
   const { offerArgs } = flow.mintCharacter.expected;
 
@@ -380,7 +380,7 @@ test.serial('--| MINT - Inventory check', async (t) => {
 test.serial('--| MINT - Item - Expected flow', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,
@@ -414,7 +414,7 @@ test.serial('--| MINT - Item - Expected flow', async (t) => {
 test.serial('--| MINT - Item - Mint same item (SFT)', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,
@@ -493,7 +493,7 @@ test.serial('--| MINT - Item - Multiple flow', async (t) => {
 test.serial('--| MINT - Item - Multiple different items flow', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,

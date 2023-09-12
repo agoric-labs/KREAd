@@ -17,7 +17,7 @@ test.before(async (t) => {
 const unequipOffer = async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,
@@ -82,7 +82,7 @@ const unequipOffer = async (t) => {
 test.serial('| INVENTORY - Unequip Item', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     purses,
   } = t.context;
   const {
@@ -115,7 +115,7 @@ test.serial('| INVENTORY - Unequip Item', async (t) => {
 test.serial('| INVENTORY - Unequip already unequipped item', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,
@@ -180,7 +180,7 @@ test.serial('| INVENTORY - Unequip already unequipped item', async (t) => {
 test.serial('| INVENTORY - Unequip - wrong character', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,
@@ -263,7 +263,7 @@ test.serial('| INVENTORY - Unequip - wrong character', async (t) => {
 test.serial('| INVENTORY - Equip Item', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,
@@ -358,7 +358,7 @@ test.serial('| INVENTORY - Equip Item', async (t) => {
 test.serial('| INVENTORY - Equip Item duplicate category', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,
@@ -462,7 +462,7 @@ test.serial('| INVENTORY - Equip Item duplicate category', async (t) => {
 test.serial('| INVENTORY - Swap Items', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,
@@ -565,7 +565,7 @@ test.serial('| INVENTORY - Swap Items', async (t) => {
 test.serial('| INVENTORY - Swap Items - Initially empty', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,
@@ -659,7 +659,7 @@ test.serial('| INVENTORY - Swap Items - Initially empty', async (t) => {
 test.serial('| INVENTORY - Swap Items - Different categories', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,
@@ -767,7 +767,7 @@ test.serial('| INVENTORY - Swap Items - Different categories', async (t) => {
 
 test.serial('| INVENTORY - Unequip all', async (t) => {
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,
@@ -841,7 +841,7 @@ test.serial('| INVENTORY - Unequip all', async (t) => {
 
 test.serial('| INVENTORY - UnequipAll empty inventory', async (t) => {
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,
