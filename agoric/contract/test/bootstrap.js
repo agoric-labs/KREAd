@@ -8,6 +8,7 @@ import { defaultCharacters } from './characters.js';
 import { defaultItems } from './items.js';
 import { makeIssuerKit } from '@agoric/ertp';
 import { makeRatio } from '@agoric/zoe/src/contractSupport/index.js';
+import { setUpGovernedContract } from '@agoric/governance/tools/puppetGovernance.js';
 
 /**
  * @param {BootstrapConf} [conf]
@@ -75,13 +76,17 @@ export const bootstrapContext = async (conf) => {
     }),
   };
 
-  // Start contract instance
-  const { creatorFacet, instance, publicFacet } = await E(zoe).startInstance(
+  // Start governed contract instance
+  const { governorFacets } = await setUpGovernedContract(
+    zoe,
     installation,
+    timerService,
+    kreadTerms,
+    privateArgs,
     { Money: issuerMockIST },
-    harden(kreadTerms),
-    harden(privateArgs),
   );
+
+  const publicFacet = await E(governorFacets.creatorFacet).getPublicFacet();
   const terms = await E(zoe).getTerms(instance);
   await E(creatorFacet).initializeBaseAssets(defaultCharacters, defaultItems);
 
