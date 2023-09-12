@@ -9,7 +9,7 @@ import { makeCopyBag } from '@agoric/store';
 import { errors } from '../src/errors.js';
 
 test.before(async (t) => {
-  const { zoe, contractAssets, assets, purses, instance, paymentAsset } =
+  const { zoe, contractAssets, assets, purses, publicFacet, paymentAsset } =
     await bootstrapContext();
 
   const alice = makeKreadUser('alice', {
@@ -23,7 +23,7 @@ test.before(async (t) => {
   alice.depositPayment(payout);
 
   t.context = {
-    instance,
+    publicFacet,
     contractAssets,
     assets,
     purses,
@@ -36,7 +36,7 @@ test.before(async (t) => {
 test.serial('--| MINT - Too Long Name', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     paymentAsset,
     users: { alice },
     zoe,
@@ -76,7 +76,7 @@ test.serial('--| MINT - Too Long Name', async (t) => {
 test.serial('--| MINT - Invalid Chars in Name', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     users: { alice },
     paymentAsset,
     zoe,
@@ -116,7 +116,7 @@ test.serial('--| MINT - Invalid Chars in Name', async (t) => {
 test.serial('--| MINT - Expected flow', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     purses,
     paymentAsset,
     users: { alice },
@@ -164,7 +164,7 @@ test.serial('--| MINT - Expected flow', async (t) => {
 test.serial('--| MINT - Fee too low', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     paymentAsset,
     users: { alice },
     zoe,
@@ -202,7 +202,7 @@ test.serial('--| MINT - Fee too low', async (t) => {
 test.serial('--| MINT - No offerArgs', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     paymentAsset,
     users: { alice },
     zoe,
@@ -240,7 +240,7 @@ test.serial('--| MINT - No offerArgs', async (t) => {
 test.serial('--| MINT - Duplicate Name', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     paymentAsset,
     users: { alice },
     zoe,
@@ -278,7 +278,7 @@ test.serial('--| MINT - Duplicate Name', async (t) => {
 test.serial('--| MINT - No name', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     paymentAsset,
     users: { alice },
     zoe,
@@ -316,7 +316,7 @@ test.serial('--| MINT - No name', async (t) => {
 test.serial('--| MINT - No characters available', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     paymentAsset,
     users: { alice },
     zoe,
@@ -353,9 +353,7 @@ test.serial('--| MINT - No characters available', async (t) => {
 
 test.serial('--| MINT - Inventory check', async (t) => {
   /** @type {Bootstrap} */
-  const {
-    instance: { publicFacet },
-  } = t.context;
+  const { publicFacet } = t.context;
   const { offerArgs } = flow.mintCharacter.expected;
 
   const characterInventory = await E(publicFacet).getCharacterInventory(
@@ -391,12 +389,7 @@ test.serial('--| MINT - Inventory check', async (t) => {
 
 test.serial('--| MINT - Item - Expected flow', async (t) => {
   /** @type {Bootstrap} */
-  const {
-    instance: { creatorFacet },
-    contractAssets,
-    purses,
-    zoe,
-  } = t.context;
+  const { creatorFacet, contractAssets, purses, zoe } = t.context;
   const { want, message } = flow.mintItem.expected;
 
   const mintItemInvitation = await E(creatorFacet).makeMintItemInvitation();
@@ -425,12 +418,7 @@ test.serial('--| MINT - Item - Expected flow', async (t) => {
 
 test.serial('--| MINT - Item - Mint same item (SFT)', async (t) => {
   /** @type {Bootstrap} */
-  const {
-    instance: { creatorFacet },
-    contractAssets,
-    purses,
-    zoe,
-  } = t.context;
+  const { creatorFacet, contractAssets, purses, zoe } = t.context;
   const { want, message } = flow.mintItem.expected;
 
   const mintItemInvitation = await E(creatorFacet).makeMintItemInvitation();
@@ -466,12 +454,7 @@ test.serial('--| MINT - Item - Mint same item (SFT)', async (t) => {
 
 test.serial('--| MINT - Item - Multiple flow', async (t) => {
   /** @type {Bootstrap} */
-  const {
-    instance: { creatorFacet },
-    contractAssets,
-    purses,
-    zoe,
-  } = t.context;
+  const { creatorFacet, contractAssets, purses, zoe } = t.context;
   const { want, message } = flow.mintItem.multiple;
 
   const mintItemInvitation = await E(creatorFacet).makeMintItemInvitation();
@@ -504,12 +487,7 @@ test.serial('--| MINT - Item - Multiple flow', async (t) => {
 
 test.serial('--| MINT - Item - Multiple different items flow', async (t) => {
   /** @type {Bootstrap} */
-  const {
-    instance: { creatorFacet },
-    contractAssets,
-    purses,
-    zoe,
-  } = t.context;
+  const { creatorFacet, contractAssets, purses, zoe } = t.context;
   const { want, message } = flow.mintItem.multipleUnique;
 
   const mintItemInvitation = await E(creatorFacet).makeMintItemInvitation();
