@@ -1,0 +1,10 @@
+SDK_PATH =/Users/chris/agoric-sdk
+COSMIC_SWINGSET_PATH =/Users/chris/agoric-sdk/packages/cosmic-swingset
+VATS_PATH =/Users/chris/agoric-sdk/packages/vats
+KEPLR_ADDRESS2 = agoric1tq3v943uaycqp90qvuyaqzwdc3eh52xzrcl4p6
+KEPLR_ADDRESS = agoric16cnnlc60cgkp7mgwtj9htf5jlakel85lhvft96
+KREAD_REPO = /Users/chris/agoric-kryha/agoric/code/Agoric/agoric/contract/src/index.js
+EVAL_PERMIT = /Users/chris/agoric-kryha/agoric/code/Agoric/agoric/contract/src/proposal/powers.json
+EVAL_CODE = /Users/chris/agoric-kryha/agoric/code/Agoric/agoric/contract/src/proposal/chain-storage-proposal.js
+EVAL_CLEAN = $(EVAL_CODE)-clean.js
+KR_AG_DIR = /Users/chris/agoric-kread/agoric

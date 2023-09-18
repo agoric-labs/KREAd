@@ -14,7 +14,7 @@ import { setUpGovernedContract } from '@agoric/governance/tools/puppetGovernance
  * @param {BootstrapConf} [conf]
  * @returns {Promise<Bootstrap>}
  */
-export const bootstrapContext = async (conf) => {
+export const bootstrapContext = async (conf = undefined) => {
   const { zoe } = setupZoe();
 
   // Setup fungible and non-fungible assets
@@ -86,9 +86,11 @@ export const bootstrapContext = async (conf) => {
     { Money: issuerMockIST },
   );
 
+  const governedInstance = E(governorFacets.creatorFacet).getInstance();
   const publicFacet = await E(governorFacets.creatorFacet).getPublicFacet();
-  const terms = await E(zoe).getTerms(instance);
+  const creatorFacet = await E(governorFacets.creatorFacet).getCreatorFacet();
   await E(creatorFacet).initializeBaseAssets(defaultCharacters, defaultItems);
+  const terms = await E(zoe).getTerms(governedInstance);
 
   const {
     issuers: { KREAdCHARACTER: characterIssuer, KREAdITEM: itemIssuer },
@@ -144,6 +146,7 @@ export const bootstrapContext = async (conf) => {
       mintRoyaltyRate.denominator,
       brandMockIST,
     ),
+    governorFacets,
   };
 
   harden(result);
