@@ -325,6 +325,156 @@ const reserveThenGetNamePaths = async (nameAdmin, paths) => {
 };
 
 /**
+ * @template {GovernableStartFn} SF
+ * @param {{
+ *   zoe: ERef<ZoeService>;
+ *   timer: ERef<import('@agoric/time/src/types').TimerService>;
+ *   contractGovernor: ERef<Installation>;
+ * }} bootstrapish
+ * @param {{
+ *   governedContractInstallation: ERef<Installation<SF>>;
+ *   issuerKeywordRecord?: IssuerKeywordRecord;
+ *   terms: Record<string, unknown>;
+ *   privateArgs: any; // TODO: connect with Installation type
+ *   label: string;
+ * }} zoeArgs
+ * @param {{
+ *   governedParams: Record<string, unknown>;
+ *   committeeCreatorFacet: any;
+ * }} govArgs
+ * @returns {Promise<GovernanceFacetKit<SF>>}
+ */
+const startGovernedInstance = async (bootstrapish, {
+    governedContractInstallation,
+    issuerKeywordRecord,
+    terms,
+    privateArgs,
+    label,
+  },
+  { governedParams, committeeCreatorFacet },
+) => {
+  const { zoe, timer, contractGovernor } = bootstrapish;
+
+  const poserInvitationP = E(
+    committeeCreatorFacet,
+  ).getPoserInvitation();
+  const [initialPoserInvitation, electorateInvitationAmount] =
+    await Promise.all([
+      poserInvitationP,
+      E(E(zoe).getInvitationIssuer()).getAmountOf(poserInvitationP),
+    ]);
+
+  const governorTerms =
+    harden({
+      timer,
+      governedContractInstallation,
+      governed: {
+        terms: {
+          ...terms,
+          governedParams: {
+            Electorate: {
+              type: 'invitation',
+              value: electorateInvitationAmount,
+            },
+            ...governedParams,
+          },
+        },
+        issuerKeywordRecord,
+        label,
+      },
+    },
+  );
+  const governorFacets = await E(zoe).startInstance(
+    contractGovernor,
+    {},
+    governorTerms,
+    harden({
+      committeeCreatorFacet,
+      governed: {
+        ...privateArgs,
+        initialPoserInvitation,
+      },
+    }),
+    `${label}-governor`,
+  );
+  const [instance, publicFacet, creatorFacet, adminFacet] = await Promise.all([
+    E(governorFacets.creatorFacet).getInstance(),
+    E(governorFacets.creatorFacet).getPublicFacet(),
+    E(governorFacets.creatorFacet).getCreatorFacet(),
+    E(governorFacets.creatorFacet).getAdminFacet(),
+  ]);
+  /** @type {GovernanceFacetKit<SF>} */
+  const facets = harden({
+    instance,
+    publicFacet,
+    governor: governorFacets.instance,
+    creatorFacet,
+    adminFacet,
+    governorCreatorFacet: governorFacets.creatorFacet,
+    governorAdminFacet: governorFacets.adminFacet,
+  });
+  return facets;
+};
+
+/**
+ * Modeled on produceStartGovernedUpgradable in basicBehaviors, but modified for
+ * a distinct committee.
+ *
+ * @param {{
+ *   chainTimerService: TimerService,
+ *   diagnostics: {
+ *     savePrivateArgs: (instance: Instance, privateArgs: unknown) => void;
+ *   };
+ *   committeeCreatorFacet,
+ *   zoe: ZoeService,
+ *   contractGovernor,
+ * }} bootstrapish
+ * @param {{
+ *   installation: Installation,
+ *   issuerKeywordRecord: IssuerKeywordRecord,
+ *   governedParams: ,
+ *   terms: Record<string, any>,
+ *   privateArgs: Record<string, any>,
+ *   label: string,
+ *   contractKits: Map<string, any>,
+ * }} params
+ */
+const startGovernedKread = async (bootstrapish, {
+  installation,
+  issuerKeywordRecord,
+  governedParams,
+  terms,
+  privateArgs,
+  label,
+  contractKits,
+}) => {
+  const { diagnostics, committeeCreatorFacet } = bootstrapish;
+
+  const facets = await startGovernedInstance(bootstrapish,
+    {
+      governedContractInstallation: installation,
+      issuerKeywordRecord,
+      terms,
+      privateArgs,
+      label,
+    },
+    {
+      governedParams,
+      committeeCreatorFacet,
+    },
+  );
+  const kit = harden({ ...facets, label });
+  contractKits.init(facets.instance, kit);
+
+  await E(diagnostics).savePrivateArgs(kit.instance, privateArgs);
+  await E(diagnostics).savePrivateArgs(kit.governor, {
+    economicCommitteeCreatorFacet: await committeeCreatorFacet,
+  });
+
+  return facets;
+};
+
+/**
  * Execute a proposal to start a contract that publishes bake sales.
  *
  * See also:
@@ -336,19 +486,20 @@ const reserveThenGetNamePaths = async (nameAdmin, paths) => {
  */
 const executeProposal = async (powers) => {
   // Destructure the powers that we use.
-  // See also bakeSale-permit.json
+  // See also powers.json
   const {
+    zone,
     consume: {
       board,
       chainStorage,
       zoe,
-      startUpgradable,
       chainTimerService,
       namesByAddressAdmin,
+      agoricNamesAdmin,
+      agoricNames,
+      diagnostics,
+      kreadCommitteeCreatorFacet,
     },
-    // @ts-expect-error bakeSaleKit isn't declared in vats/src/core/types.js
-    // FIXME: Remove?
-    produce: { kreadKit },
     brand: {
       produce: {
         KREAdCHARACTER: produceCharacterBrand,
@@ -362,9 +513,13 @@ const executeProposal = async (powers) => {
         KREAdITEM: produceItemIssuer,
       },
     },
+    produce,
     instance: {
-      // @ts-expect-error bakeSaleKit isn't declared in vats/src/core/types.js
+      // @ts-expect-error kreadKit isn't declared in vats/src/core/types.js
       produce: { [contractInfo.instanceName]: kread },
+    },
+    installation: {
+      consume: { contractGovernor },
     },
   } = powers;
 
@@ -401,6 +556,9 @@ const executeProposal = async (powers) => {
     denominator: 100n,
   };
 
+  const contractKits = zone.mapStore('KreadContractKits');
+  produce.governedContractKits.resolve(contractKits);
+
   const chainStorageSettled =
     (await chainStorage) || fail(Error('no chainStorage - sim chain?'));
   const storageNode = E(chainStorageSettled).makeChildNode(
@@ -432,13 +590,18 @@ const executeProposal = async (powers) => {
   //FIXME: update terms based on changes to private args
   const noTerms = harden({});
 
-  const { instance, creatorFacet } = await E(startUpgradable)({
-    installation,
-    label: 'KREAd',
-    issuers,
-    privateArgs,
-    noTerms,
-  });
+  const bootstrapish = {
+    diagnostics,
+    committeeCreatorFacet: kreadCommitteeCreatorFacet,
+    zoe,
+    contractGovernor,
+    chainTimerService,
+  };
+
+  const { instance, creatorFacet, publicFacet } = await E(startGovernedKread)(
+    bootstrapish,
+    { installation, label: 'KREAd', issuers, privateArgs, terms: noTerms },
+  );
 
   // Get board ids for instance and assets
   const boardId = await E(board).getId(instance);

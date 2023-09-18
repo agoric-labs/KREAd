@@ -6,6 +6,10 @@
     "zoe": true,
     "startUpgradable": true,
     "namesByAddressAdmin": true
+    "agoricNamesAdmin": true,
+    "agoricNames": true,
+    "diagnostics": true,
+    "kreadCommitteeCreatorFacet": true
   },
   "produce": {
     "kreadKit": true

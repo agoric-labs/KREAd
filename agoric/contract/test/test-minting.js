@@ -40,7 +40,7 @@ test.serial('--| MINT - Too Long Name', async (t) => {
     contractAssets,
     zoe,
   } = t.context;
-  const { want, message } = flow.mintCharacter.invalidName1;
+  const { want } = flow.mintCharacter.invalidName1;
 
   const mintCharacterInvitation = await E(
     publicFacet,
@@ -104,7 +104,7 @@ test.serial('--| MINT - Invalid Chars in Name', async (t) => {
 test.serial('--| MINT - Expected flow', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     purses,
     paymentAsset,
     users: { alice },
@@ -152,7 +152,7 @@ test.serial('--| MINT - Expected flow', async (t) => {
 test.serial('--| MINT - Fee too low', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     paymentAsset,
     users: { alice },
     zoe,
@@ -190,7 +190,7 @@ test.serial('--| MINT - Fee too low', async (t) => {
 test.serial('--| MINT - No offerArgs', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     paymentAsset,
     users: { alice },
     zoe,
@@ -304,7 +304,7 @@ test.serial('--| MINT - No name', async (t) => {
 test.serial('--| MINT - No characters available', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     paymentAsset,
     users: { alice },
     zoe,
@@ -455,7 +455,7 @@ test.serial('--| MINT - Item - Mint same item (SFT)', async (t) => {
 test.serial('--| MINT - Item - Multiple flow', async (t) => {
   /** @type {Bootstrap} */
   const {
-    instance: { publicFacet },
+    publicFacet,
     contractAssets,
     purses,
     zoe,

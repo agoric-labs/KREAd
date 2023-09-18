@@ -29,8 +29,6 @@ import { RatioObject } from './type-guards.js';
 /** @type {ContractMeta} */
 export const meta = {
   privateArgsShape: M.splitRecord({
-    defaultCharacters: M.any(), // TODO: see if these can be typed
-    defaultItems: M.any(), // TODO: see if these can be typed
     initialPoserInvitation: InvitationShape,
     seed: M.number(),
     clock: M.eref(M.remotable('Clock')),

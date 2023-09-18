@@ -38,6 +38,25 @@ wallet1:
 deploy:
 	agoric deploy contract/kread-deploy-contract.js api/kread-deploy-api.js
 
+install-kread:
+	agoric run contract/src/proposal/kread-committee-script.js
+	agoric publish --node 127.0.0.1:26657 /Users/chris/.agoric/cache/b1-610ae18f1dcefba0d443196aaf853550d26a69704113ba5cfcea8f811a0c17fa21a98cd485c25b403bf22d629c3e161d4b42e16fa5b1c77aee5457919aad74c0.json \
+	--chain-id agoriclocal --home $(COSMIC_SWINGSET_PATH)/t1/8000;
+	agoric publish --node 127.0.0.1:26657 /Users/chris/.agoric/cache/b1-0c780c20b02a7e3a10126ca84ce76c50bb34744d9621c83e230ec977b85a8d21ab8f88842fe89edf3a219008edb375178a9dc54f4867ad17463bc0a05470e5ee.json \
+	--chain-id agoriclocal --home $(COSMIC_SWINGSET_PATH)/t1/8000;
+#	agd tx swingset install-bundle @/Users/chris/.agoric/cache/b1-.json  \
+#       --from gov1 --keyring-backend=test --gas=auto --chain-id=agoriclocal -bblock --yes
+#	agd tx gov submit-proposal swingset-core-eval kread-invite-committee-permit.json kread-invite-committee.js \
+#		--title="Install Kread Committee" --description="Evaluate kread-invite-committee.js" --deposit=1000000ubld \
+#		--gas=auto --gas-adjustment=1.2
+#	agoric run contract/src/proposal/start-kread-script.js
+#	agd tx gov submit-proposal swingset-core-eval kread-invite-committee-permit.json kread-invite-committee.js \
+#		--title="Enable <something>" --description="Evaluate kread-invite-committee.js" --deposit=1000000ubld \
+#		--gas=auto --gas-adjustment=1.2
+#	agd tx gov submit-proposal swingset-core-eval kread-invite-committee-permit.json kread-invite-committee.js \
+#		--title="Enable <something>" --description="Evaluate kread-invite-committee.js" --deposit=1000000ubld \
+#		--gas=auto --gas-adjustment=1.
+
 kread-bundle:
 	cd $(VATS_PATH); \
     yarn bundle-source --cache-json bundles/ ${KREAD_REPO} kread; \
@@ -67,7 +86,7 @@ provision-fee-collector:
 fund-account:
 	cd $(COSMIC_SWINGSET_PATH); \
 	make fund-acct ACCT_ADDR=$(KEPLR_ADDRESS) FUNDS=1000000000000uist; \
-    make fund-acct ACCT_ADDR=$(KEPLR_ADDRESS) FUNDS=1000000000000ubld; \
+	make fund-acct ACCT_ADDR=$(KEPLR_ADDRESS) FUNDS=1000000000000ubld; \
 
 fund-pool:
 	cd $(COSMIC_SWINGSET_PATH); \
@@ -90,10 +109,10 @@ proposal-2:
 # before running make proposal
 bootstrap:
 	make provision-account; \
-    make fund-account; \
+	make fund-account; \
 	make kread-bundle; \
 	make proposal; \
 
 fund+provision:
 	make provision-account; \
-    make fund-account; \
+	make fund-account; \
