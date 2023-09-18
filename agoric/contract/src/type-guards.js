@@ -164,7 +164,9 @@ export const ItemI = M.interface('item', {
 
 export const MarketRecorderGuard = M.splitRecord({
   id: M.or(M.gte(0), M.string()),
+  // FIXME don't publish seats (they have money)
   seat: M.eref(M.remotable('Seat')),
+  // CONSIDER: a NatAmountShape, or a helper to make a marketRecordGuard from the actual brands
   askingPrice: M.splitRecord({
     brand: BrandShape,
     value: M.nat(),

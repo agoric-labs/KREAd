@@ -253,7 +253,9 @@ export const prepareKreadKit = async (
             const { give } = seat.getProposal();
             mustMatch(
               offerArgs,
-              M.splitRecord({ name: M.string(harden({ stringLengthLimit: 20 })) }),
+              M.splitRecord({
+                name: M.string(harden({ stringLengthLimit: 20 })),
+              }),
               'offerArgs',
             );
 
@@ -1085,7 +1087,17 @@ export const prepareKreadKit = async (
 
             market.itemEntries.addAll([[newEntry.id, harden(newEntry)]]);
 
+            // NB: serializes the whole collection when a user buys or sells.
+            // MITIGATION: have a "sold" collection that patches the inventory collection
+            // and when it hits a certain size they both get reset
             marketItemKit.recorder.write(
+              // RISK: if this gets into the thousands.
+              // MITIGAION: a hard limit on size of collection being serialized (TBD from perf tooling)
+              // MITIGATION: can implement paging such that each page of 1000 items has its own path
+              // But because of filtering by category, the client would have to fetch all pages before filtering.
+              // Could have paths per category and page within it.
+              // PRIORITIZATION: when would they hit 1000 items. Depends on the artiest. They could start out
+              // with 1000 items at start.
               Array.from(market.itemEntries.values()),
             );
 
@@ -1228,6 +1240,7 @@ export const prepareKreadKit = async (
             market.characterEntries.addAll([[newEntry.id, harden(newEntry)]]);
 
             marketCharacterKit.recorder.write(
+              // NB: limited to 1000 because that's the size of the baseItems collection
               Array.from(market.characterEntries.values()),
             );
 
@@ -1631,6 +1644,8 @@ export const prepareKreadKit = async (
         },
       },
       creator: {
+        // TODO: remove, redundant with getTerms()
+        // (terms aren't automatically published to the board but everything that needs to be on the board is)
         publishKreadInfo(
           instanceBoardId,
           characterBrandBoardId,
@@ -1784,6 +1799,7 @@ export const prepareKreadKit = async (
     },
   );
 
+  // TODO return only {creator, public} facets
   return harden(makeKreadKitInternal());
 };
 
