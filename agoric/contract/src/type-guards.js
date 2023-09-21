@@ -214,6 +214,7 @@ export const MarketI = M.interface('market', {
   handleExitCharacter: M.call(MarketEntryGuard).returns(),
   makeMarketItemRecorderKit: M.call(M.number()).returns(M.promise()),
   makeMarketCharacterRecorderKit: M.call(M.string()).returns(M.promise()),
+  deleteNode: M.call(M.remotable('StorageNode')).returns(M.promise(/* void */)),
   sellCharacter: M.call().returns(M.promise()),
   buyCharacter: M.call().returns(M.promise()),
   updateMetrics: M.call(

@@ -54,7 +54,7 @@
  *   isFirstSale: boolean
  *   royalty: Amount<AssetKind>
  *   platformFee: Amount<AssetKind>
- *   recorderKit: any
+ *   recorderKit: import("./utils.js").RecorderKit
  * }} ItemMarketRecord
  *
  * @typedef {{

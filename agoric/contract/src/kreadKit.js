@@ -2,7 +2,7 @@
 // @ts-check
 import '@agoric/zoe/exported';
 import { updateCharacterMetrics, updateItemMetrics } from './market-metrics';
-import { assert, details as X } from '@agoric/assert';
+import { assert, Fail, details as X } from '@agoric/assert';
 import { AmountMath, BrandShape } from '@agoric/ertp';
 import { makeScalarBigMapStore, prepareExoClassKit, M } from '@agoric/vat-data';
 import { E } from '@endo/eventual-send';
@@ -1029,26 +1029,32 @@ export const prepareKreadKit = async (
         async makeMarketItemRecorderKit(id) {
           const path = `item-${String(id)}`;
           const node = await E(marketItemNode).makeChildNode(path);
-          const recorderKit = makeRecorderKit(node, MarketRecorderGuard);
-          const deleteNode = async () => {
-            const deletableNode = await E(marketItemNode).makeChildNode(path, {
-              sequence: false,
-            });
-            deletableNode.setValue('');
-          };
-          return { ...recorderKit, deleteNode };
+          return makeRecorderKit(node, MarketRecorderGuard);
         },
         async makeMarketCharacterRecorderKit(id) {
           const path = `market-character-${id}`;
           const node = await E(marketCharacterNode).makeChildNode(path);
-          const recorderKit = makeRecorderKit(node, MarketRecorderGuard);
-          const deleteNode = async () => {
-            const deletableNode = await E(marketItemNode).makeChildNode(path, {
-              sequence: false,
-            });
-            deletableNode.setValue('');
-          };
-          return { ...recorderKit, deleteNode };
+          return makeRecorderKit(node, MarketRecorderGuard);
+        },
+        /**
+         *
+         * @param {StorageNode} node
+         */
+        async deleteNode(node) {
+          const path = node.getPath();
+          const segments = path.split('.');
+          const parentSegment = segments.at(-2);
+          console.log({ parentSegment });
+          // XXX should work for any parent
+          const parent = path.includes('character')
+            ? marketCharacterNode
+            : marketItemNode;
+          const childSegment = segments.at(-1);
+          assert(childSegment, `missing child path segment in ${path}`);
+          const deletable = await E(parent).makeChildNode(childSegment, {
+            sequence: false,
+          });
+          await deletable.setValue('');
         },
         sellItem() {
           const handler = async (seat) => {
@@ -1441,7 +1447,9 @@ export const prepareKreadKit = async (
           });
 
           market.itemEntries.delete(sellRecord.id);
-          void sellRecord.recorderKit.deleteNode();
+          void marketFacet.deleteNode(
+            sellRecord.recorderKit.recorder.getStorageNode(),
+          );
 
           // update metrics
           marketFacet.updateMetrics('item', {
