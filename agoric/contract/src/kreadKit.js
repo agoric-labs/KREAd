@@ -1053,10 +1053,10 @@ export const prepareKreadKit = async (
           const childSegment = segments.at(-1);
           console.log('trace', { childSegment, parentSegment });
           assert(childSegment, `missing child path segment in ${path}`);
-          const deletable = await E(parent).makeChildNode(childSegment, {
+          const deletable = E(parent).makeChildNode(childSegment, {
             sequence: false,
           });
-          await deletable.setValue('');
+          await E(deletable).setValue('');
         },
         sellItem() {
           const handler = async (seat) => {
