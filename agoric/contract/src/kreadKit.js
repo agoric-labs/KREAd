@@ -37,6 +37,7 @@ import {
 } from './type-guards.js';
 import { atomicRearrange } from '@agoric/zoe/src/contractSupport/index.js';
 import { multiplyBy } from '@agoric/zoe/src/contractSupport/ratio';
+
 /**
  * this provides the exoClassKit for our upgradable KREAd contract
  * Utilizes capabilities from the prepare function suchs as mints
@@ -983,7 +984,7 @@ export const prepareKreadKit = async (
           const characterLevel = characterFacet.calculateLevel(object.name);
 
           const subscriber = E(seat).getSubscriber();
-          E.when(E(subscriber).getUpdateSince(), () => {
+          void E.when(E(subscriber).getUpdateSince(), () => {
             marketFacet.updateMetrics('character', {
               marketplaceAverageLevel: {
                 type: 'remove',
@@ -993,7 +994,7 @@ export const prepareKreadKit = async (
 
             market.characterEntries.delete(object.name);
 
-            void recorderKit.deleteNode();
+            void marketFacet.deleteNode(recorderKit.recorder.getStorageNode());
           });
         },
         handleExitItem(entry) {
@@ -1041,15 +1042,16 @@ export const prepareKreadKit = async (
          * @param {StorageNode} node
          */
         async deleteNode(node) {
-          const path = node.getPath();
+          const path = await E(node).getPath();
+          console.log('deleting storage node', path);
           const segments = path.split('.');
           const parentSegment = segments.at(-2);
-          console.log({ parentSegment });
           // XXX should work for any parent
           const parent = path.includes('character')
             ? marketCharacterNode
             : marketItemNode;
           const childSegment = segments.at(-1);
+          console.log('trace', { childSegment, parentSegment });
           assert(childSegment, `missing child path segment in ${path}`);
           const deletable = await E(parent).makeChildNode(childSegment, {
             sequence: false,
