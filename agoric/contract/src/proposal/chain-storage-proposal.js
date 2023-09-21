@@ -405,7 +405,6 @@ const executeProposal = async (powers) => {
     (await chainStorage) || fail(Error('no chainStorage - sim chain?'));
   const storageNode = E(chainStorageSettled).makeChildNode(
     contractInfo.storagePath,
-    { sequence: false },
   );
   const marshaller = await E(board).getReadonlyMarshaller();
   const kreadPowers = { storageNode, marshaller };

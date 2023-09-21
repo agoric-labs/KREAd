@@ -993,7 +993,7 @@ export const prepareKreadKit = async (
 
             market.characterEntries.delete(object.name);
 
-            recorderKit.recorder.getStorageNode().setValue('');
+            void recorderKit.deleteNode();
           });
         },
         handleExitItem(entry) {
@@ -1026,21 +1026,29 @@ export const prepareKreadKit = async (
             updateItemMetrics(this.state, updateMetrics, marketItemMetricsKit);
           }
         },
-        async makeMarketItemRecorderKit(path) {
-          const node = await E(marketItemNode).makeChildNode(
-            `item-${String(path)}`,
-            { sequence: false },
-          );
+        async makeMarketItemRecorderKit(id) {
+          const path = `item-${String(id)}`;
+          const node = await E(marketItemNode).makeChildNode(path);
           const recorderKit = makeRecorderKit(node, MarketRecorderGuard);
-          return recorderKit;
+          const deleteNode = async () => {
+            const deletableNode = await E(marketItemNode).makeChildNode(path, {
+              sequence: false,
+            });
+            deletableNode.setValue('');
+          };
+          return { ...recorderKit, deleteNode };
         },
-        async makeMarketCharacterRecorderKit(path) {
-          const node = await E(marketCharacterNode).makeChildNode(
-            `market-character-${path}`,
-            { sequence: false },
-          );
+        async makeMarketCharacterRecorderKit(id) {
+          const path = `market-character-${id}`;
+          const node = await E(marketCharacterNode).makeChildNode(path);
           const recorderKit = makeRecorderKit(node, MarketRecorderGuard);
-          return recorderKit;
+          const deleteNode = async () => {
+            const deletableNode = await E(marketItemNode).makeChildNode(path, {
+              sequence: false,
+            });
+            deletableNode.setValue('');
+          };
+          return { ...recorderKit, deleteNode };
         },
         sellItem() {
           const handler = async (seat) => {
@@ -1433,7 +1441,7 @@ export const prepareKreadKit = async (
           });
 
           market.itemEntries.delete(sellRecord.id);
-          sellRecord.recorderKit.recorder.getStorageNode().setValue('');
+          void sellRecord.recorderKit.deleteNode();
 
           // update metrics
           marketFacet.updateMetrics('item', {
