@@ -112,6 +112,7 @@ const baseItems = [
     name: 'AirTox: Fairy Dust Elite',
     category: 'patch',
     functional: false,
+    origin: 'Elphia',
     description:
       'This is an all-purpose air filter and air temperature regulator with minimal water analyzing technology. Suitable for warm hostile places, weather, and contaminated areas. Not so good for the dead zone.',
     image:
@@ -132,6 +133,7 @@ const baseItems = [
     name: 'AirTox: Fairy Dust Elite',
     category: 'perk2',
     functional: false,
+    origin: 'Elphia',
     description:
       'This is an all-purpose air filter and air temperature regulator with minimal water analyzing technology. Suitable for warm hostile places, weather, and contaminated areas. Not so good for the dead zone.',
     image:
@@ -151,6 +153,7 @@ const baseItems = [
   {
     name: 'AirTox: Fairy Dust Elite',
     category: 'headPiece',
+    origin: 'Elphia',
     functional: false,
     description:
       'This is an all-purpose air filter and air temperature regulator with minimal water analyzing technology. Suitable for warm hostile places, weather, and contaminated areas. Not so good for the dead zone.',
@@ -172,6 +175,7 @@ const baseItems = [
     name: 'AirTox: Fairy Dust Elite',
     category: 'filter2',
     functional: false,
+    origin: 'Elphia',
     description:
       'This is an all-purpose air filter and air temperature regulator with minimal water analyzing technology. Suitable for warm hostile places, weather, and contaminated areas. Not so good for the dead zone.',
     image:
@@ -192,6 +196,7 @@ const baseItems = [
     name: 'AirTox: Fairy Dust Elite',
     category: 'garment',
     functional: false,
+    origin: 'Elphia',
     description:
       'This is an all-purpose air filter and air temperature regulator with minimal water analyzing technology. Suitable for warm hostile places, weather, and contaminated areas. Not so good for the dead zone.',
     image:
@@ -212,6 +217,7 @@ const baseItems = [
     name: 'AirTox: Fairy Dust Elite',
     category: 'hair',
     functional: false,
+    origin: 'Elphia',
     description:
       'This is an all-purpose air filter and air temperature regulator with minimal water analyzing technology. Suitable for warm hostile places, weather, and contaminated areas. Not so good for the dead zone.',
     image:
@@ -232,6 +238,7 @@ const baseItems = [
     name: 'AirTox: Fairy Dust Elite',
     category: 'filter1',
     functional: false,
+    origin: 'Elphia',
     description:
       'This is an all-purpose air filter and air temperature regulator with minimal water analyzing technology. Suitable for warm hostile places, weather, and contaminated areas. Not so good for the dead zone.',
     origin: 'elphia',
@@ -253,6 +260,7 @@ const baseItems = [
     name: 'AirTox: Fairy Dust Elite',
     category: 'background',
     functional: false,
+    origin: 'Elphia',
     description:
       'This is an all-purpose air filter and air temperature regulator with minimal water analyzing technology. Suitable for warm hostile places, weather, and contaminated areas. Not so good for the dead zone.',
     image:
@@ -278,7 +286,7 @@ const contractInfo = {
   // from Dec 14 office hours
   // https://github.com/Agoric/agoric-sdk/issues/6454#issuecomment-1351949397
   bundleID:
-    'b1-eafd84a744e312ef72dad6be3fbfa9e8a1d4247f8905a5cf3bb27c1270c375beafa6d69521ab8f8a4ed9151e3f4421b87b15e0797a2ca8eb822a8fb4945db6e0',
+    'b1-63bbc9ac4ef3c50082fd1bbfe5fb8c625be75bcbaae0fc1cec3ab4a5a2386549659e12c85d10e6dc17c112dbfd561ca94d578f3d6a9c0e045648fa1b923c445e',
 };
 
 const fail = (reason) => {
@@ -339,6 +347,7 @@ const executeProposal = async (powers) => {
       namesByAddressAdmin,
     },
     // @ts-expect-error bakeSaleKit isn't declared in vats/src/core/types.js
+    // FIXME: Remove?
     produce: { kreadKit },
     brand: {
       produce: {
@@ -383,49 +392,68 @@ const executeProposal = async (powers) => {
     denominator: 100n,
   };
 
+  const mintRoyaltyRate = {
+    numerator: 85n,
+    denominator: 100n,
+  };
+  const mintPlatformFeeRate = {
+    numerator: 15n,
+    denominator: 100n,
+  };
+
   const chainStorageSettled =
     (await chainStorage) || fail(Error('no chainStorage - sim chain?'));
   const storageNode = E(chainStorageSettled).makeChildNode(
     contractInfo.storagePath,
+    { sequence: false },
   );
   const marshaller = await E(board).getReadonlyMarshaller();
   const kreadPowers = { storageNode, marshaller };
   const settledTimer = await chainTimerService;
   const clock = await E(settledTimer).getClock();
 
+  //FIXME: update this based privageargs/terms
   const kreadConfig = harden({
     clock,
     seed: 303,
-    royaltyRate,
-    platformFeeRate,
-    royaltyDepositFacet,
-    platformFeeDepositFacet,
-    paymentBrand: brand,
-    mintFee: 30000000n,
   });
 
   const privateArgs = harden({ powers: kreadPowers, ...kreadConfig });
 
   const installation = await E(zoe).installBundleID(contractInfo.bundleID);
   const issuers = harden({ Money: istIssuer });
-  // TODO: add terms indicating the keywordRecords used within our offers
-  const noTerms = harden({});
+  const terms = harden({
+    royaltyRate,
+    platformFeeRate,
+    mintRoyaltyRate,
+    mintPlatformFeeRate,
+    royaltyDepositFacet,
+    platformFeeDepositFacet,
+    paymentBrand: brand,
+    mintFee: 30000000n,
+    assetNames: {
+      character: 'KREAdCHARACTER',
+      item: 'KREAdITEM',
+    },
+  });
 
-  const { instance, creatorFacet, publicFacet } = await E(startUpgradable)({
+  const { instance, creatorFacet } = await E(startUpgradable)({
     installation,
     label: 'KREAd',
     issuers,
     privateArgs,
-    noTerms,
+    terms,
   });
 
   // Get board ids for instance and assets
   const boardId = await E(board).getId(instance);
+  //FIXME: update this based no getTerms
   const {
-    character: { issuer: characterIssuer, brand: characterBrand },
-    item: { issuer: itemIssuer, brand: itemBrand },
-  } = await E(publicFacet).getTokenInfo();
+    issuers: { KREAdCHARACTER: characterIssuer, KREAdITEM: itemIssuer },
+    brands: { KREAdCHARACTER: characterBrand, KREAdITEM: itemBrand },
+  } = await E(zoe).getTerms(instance);
 
+  //FIXME: remove these infavour of terms and getting them differently
   const [
     CHARACTER_BRAND_BOARD_ID,
     CHARACTER_ISSUER_BOARD_ID,
@@ -437,14 +465,6 @@ const executeProposal = async (powers) => {
     E(board).getId(itemBrand),
     E(board).getId(itemIssuer),
   ]);
-
-  const assetBoardIds = {
-    character: {
-      issuer: CHARACTER_ISSUER_BOARD_ID,
-      brand: CHARACTER_BRAND_BOARD_ID,
-    },
-    item: { issuer: ITEM_ISSUER_BOARD_ID, brand: ITEM_BRAND_BOARD_ID },
-  };
 
   await E(creatorFacet).publishKreadInfo(
     boardId,
@@ -458,7 +478,7 @@ const executeProposal = async (powers) => {
 
   await E(creatorFacet).initializeMetrics();
 
-  // TODO: Get the most recent state of metrics from the storage node and send it to the contract
+  // FIXME: Get the most recent state of metrics from the storage node and send it to the contract
   // const data = {};
   // const restoreMetricsInvitation = await E(
   //   creatorFacet,
@@ -468,14 +488,6 @@ const executeProposal = async (powers) => {
   // Revive seat exit subscribers after upgrade
   await E(creatorFacet).reviveMarketExitSubscribers();
 
-  // Log board ids for use in frontend constants
-  console.log(`KREAD BOARD ID: ${boardId}`);
-  for (const [key, value] of Object.entries(assetBoardIds)) {
-    console.log(`${key.toUpperCase()} BRAND BOARD ID: ${value.brand}`);
-    console.log(`${key.toUpperCase()} ISSUER BOARD ID: ${value.issuer}`);
-  }
-
-  // Share instance widely via E(agoricNames).lookup('instance', <instance name>)
   kread.resolve(instance);
 
   produceCharacterIssuer.resolve(characterIssuer);
@@ -483,8 +495,7 @@ const executeProposal = async (powers) => {
   produceItemIssuer.resolve(itemIssuer);
   produceItemBrand.resolve(itemBrand);
 
-  console.log('ASSETS ADDED TO AGORIC NAMES');
-  // Share instance widely via E(agoricNames).lookup('instance', <instance name>)
+  console.log('CONTRACT INIT SUCCESS!');
 };
 
 harden(executeProposal);
@@ -492,4 +503,4 @@ harden(executeProposal);
 // "export" the function as the script completion value
 executeProposal;
 
-//# sourceURL=/Users/pandelissymeonidis/Projects/Agoric/agoric/contract/src/proposal/chain-storage-proposal.js
+//# sourceURL=/Users/wietzes/Documents/cosmos/Agoric/agoric/contract/src/proposal/chain-storage-proposal.js

@@ -118,6 +118,10 @@ export const prepareKreadKit = async (
       marketItemMetricsKit: MarketMetricsGuard,
     },
   );
+  const marketItemNode = marketItemKit.recorder.getStorageNode();
+  const marketCharacterNode = marketCharacterKit.recorder.getStorageNode();
+
+  const characterNode = characterKit.recorder.getStorageNode();
 
   const characterShape = makeCopyBagAmountShape(
     characterBrand,
@@ -235,7 +239,9 @@ export const prepareKreadKit = async (
           characterState.bases.addAll(baseCharacters);
         },
         async makeInventoryRecorderKit(path) {
-          const node = await E(storageNode).makeChildNode(`inventory-${path}`);
+          const node = await E(characterNode).makeChildNode(
+            `inventory-${path}`,
+          );
           return makeRecorderKit(node, M.arrayOf([ItemGuard, M.nat()]));
         },
         mint() {
@@ -973,7 +979,7 @@ export const prepareKreadKit = async (
           const { market: marketFacet, character: characterFacet } =
             this.facets;
 
-          const { seat, object } = entry;
+          const { seat, object, recorderKit } = entry;
           const characterLevel = characterFacet.calculateLevel(object.name);
 
           const subscriber = E(seat).getSubscriber();
@@ -987,18 +993,14 @@ export const prepareKreadKit = async (
 
             market.characterEntries.delete(object.name);
 
-            marketCharacterKit.recorder.write(
-              Array.from(market.characterEntries.values()).map((entry) =>
-                (({ seat, ...entry }) => entry)(entry),
-              ),
-            );
+            recorderKit.recorder.getStorageNode().setValue('');
           });
         },
         handleExitItem(entry) {
           const { market } = this.state;
           const { market: marketFacet } = this.facets;
 
-          const { seat, object, id } = entry;
+          const { seat, object, id, recorderKit } = entry;
 
           const subscriber = E(seat).getSubscriber();
           E.when(E(subscriber).getUpdateSince(), () => {
@@ -1010,12 +1012,7 @@ export const prepareKreadKit = async (
             });
 
             market.itemEntries.delete(id);
-
-            marketItemKit.recorder.write(
-              Array.from(market.itemEntries.values()).map((entry) =>
-                (({ seat, ...entry }) => entry)(entry),
-              ),
-            );
+            recorderKit.recorder.getStorageNode().setValue('');
           });
         },
         updateMetrics(collection, updateMetrics) {
@@ -1029,8 +1026,24 @@ export const prepareKreadKit = async (
             updateItemMetrics(this.state, updateMetrics, marketItemMetricsKit);
           }
         },
+        async makeMarketItemRecorderKit(path) {
+          const node = await E(marketItemNode).makeChildNode(
+            `item-${String(path)}`,
+            { sequence: false },
+          );
+          const recorderKit = makeRecorderKit(node, MarketRecorderGuard);
+          return recorderKit;
+        },
+        async makeMarketCharacterRecorderKit(path) {
+          const node = await E(marketCharacterNode).makeChildNode(
+            `market-character-${path}`,
+            { sequence: false },
+          );
+          const recorderKit = makeRecorderKit(node, MarketRecorderGuard);
+          return recorderKit;
+        },
         sellItem() {
-          const handler = (seat) => {
+          const handler = async (seat) => {
             const { market } = this.state;
             const { market: marketFacet } = this.facets;
 
@@ -1048,6 +1061,11 @@ export const prepareKreadKit = async (
             const platformFee = multiplyBy(want.Price, platformFeeRate);
 
             const object = objectInSellSeat.value.payload[0][0];
+            const id = this.state.itemsPutForSaleAmount;
+
+            const entryRecorder = await marketFacet.makeMarketItemRecorderKit(
+              id,
+            );
 
             // Add to store array
             const newEntry = {
@@ -1055,8 +1073,9 @@ export const prepareKreadKit = async (
               askingPrice,
               royalty,
               platformFee,
-              id: this.state.itemsPutForSaleAmount,
+              id,
               object,
+              recorderKit: entryRecorder,
               isFirstSale: false,
             };
 
@@ -1070,11 +1089,13 @@ export const prepareKreadKit = async (
 
             market.itemEntries.addAll([[newEntry.id, harden(newEntry)]]);
 
-            marketItemKit.recorder.write(
-              Array.from(market.itemEntries.values()).map((entry) =>
-                (({ seat, ...entry }) => entry)(entry),
-              ),
-            );
+            const {
+              seat: omitSeat,
+              recorderKit,
+              recorderNode,
+              ...entry
+            } = newEntry;
+            recorderKit.recorder.write(entry);
 
             marketFacet.handleExitItem(newEntry);
             this.state.itemsPutForSaleAmount++;
@@ -1121,18 +1142,40 @@ export const prepareKreadKit = async (
             const royalty = multiplyBy(want.Price, royaltyRate);
             const platformFee = multiplyBy(want.Price, platformFeeRate);
 
-            itemsToSell.forEach((copyBagEntry) => {
+            const claimedIdAndRecorder = await Promise.all(
+              itemsToSell.map(async (copyBagEntry) => {
+                const [_, itemSupply] = copyBagEntry;
+                const array = Array.from(Array(Number(itemSupply)).keys());
+                const idAndRecorder = await Promise.all(
+                  array.map(async (i) => {
+                    const id = this.state.itemsPutForSaleAmount;
+                    this.state.itemsPutForSaleAmount++;
+                    const entryRecorder =
+                      await marketFacet.makeMarketItemRecorderKit(id);
+
+                    return [id, entryRecorder];
+                  }),
+                );
+                return idAndRecorder;
+              }),
+            );
+
+            let count = 0;
+            itemsToSell.forEach(async (copyBagEntry) => {
               const [itemObject, itemSupply] = copyBagEntry;
 
               for (let n = 0; n < itemSupply; n++) {
+                const [id, entryRecorder] = claimedIdAndRecorder.flat()[count];
+
                 // Add to store array
                 const newEntry = {
                   seat: internalSellSeat,
                   askingPrice,
                   royalty,
                   platformFee,
-                  id: this.state.itemsPutForSaleAmount,
+                  id,
                   object: itemObject,
+                  recorderKit: entryRecorder,
                   isFirstSale: true,
                 };
 
@@ -1146,13 +1189,10 @@ export const prepareKreadKit = async (
 
                 market.itemEntries.addAll([[newEntry.id, harden(newEntry)]]);
 
-                marketItemKit.recorder.write(
-                  Array.from(market.itemEntries.values()).map((entry) =>
-                    (({ seat, ...entry }) => entry)(entry),
-                  ),
-                );
+                const { seat: omitSeat, recorderKit, ...entry } = newEntry;
+                recorderKit.recorder.write(entry);
 
-                this.state.itemsPutForSaleAmount++;
+                count++;
               }
             });
           };
@@ -1172,7 +1212,7 @@ export const prepareKreadKit = async (
           );
         },
         sellCharacter() {
-          const handler = (seat) => {
+          const handler = async (seat) => {
             const { market } = this.state;
             const { character: characterFacet, market: marketFacet } =
               this.facets;
@@ -1192,6 +1232,9 @@ export const prepareKreadKit = async (
 
             const object = objectInSellSeat.value.payload[0][0];
 
+            const entryRecorder =
+              await marketFacet.makeMarketCharacterRecorderKit(object.name);
+
             // Add to store array
             const newEntry = {
               seat,
@@ -1200,6 +1243,7 @@ export const prepareKreadKit = async (
               platformFee,
               id: object.name,
               object,
+              recorderKit: entryRecorder,
               isFirstSale: false,
             };
 
@@ -1214,11 +1258,8 @@ export const prepareKreadKit = async (
 
             market.characterEntries.addAll([[newEntry.id, harden(newEntry)]]);
 
-            marketCharacterKit.recorder.write(
-              Array.from(market.characterEntries.values()).map((entry) =>
-                (({ seat, ...entry }) => entry)(entry),
-              ),
-            );
+            const { seat: omitSeat, recorderKit, ...entry } = newEntry;
+            recorderKit.recorder.write(entry);
 
             marketFacet.handleExitCharacter(newEntry);
           };
@@ -1392,12 +1433,7 @@ export const prepareKreadKit = async (
           });
 
           market.itemEntries.delete(sellRecord.id);
-
-          marketItemKit.recorder.write(
-            Array.from(market.itemEntries.values()).map((entry) =>
-              (({ seat, ...entry }) => entry)(entry),
-            ),
-          );
+          sellRecord.recorderKit.recorder.getStorageNode().setValue('');
 
           // update metrics
           marketFacet.updateMetrics('item', {

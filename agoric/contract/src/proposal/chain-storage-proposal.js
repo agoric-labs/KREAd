@@ -286,7 +286,7 @@ const contractInfo = {
   // from Dec 14 office hours
   // https://github.com/Agoric/agoric-sdk/issues/6454#issuecomment-1351949397
   bundleID:
-    'b1-3610e0a646b00a307f713e02765b7bb9320c195e5bc616106cfec05b98b78881f1ece60f2738d8d7be637d6a50e6f9ea373b31c1d331985dd4f5f6ead8a09d18',
+    'b1-63bbc9ac4ef3c50082fd1bbfe5fb8c625be75bcbaae0fc1cec3ab4a5a2386549659e12c85d10e6dc17c112dbfd561ca94d578f3d6a9c0e045648fa1b923c445e',
 };
 
 const fail = (reason) => {
@@ -405,6 +405,7 @@ const executeProposal = async (powers) => {
     (await chainStorage) || fail(Error('no chainStorage - sim chain?'));
   const storageNode = E(chainStorageSettled).makeChildNode(
     contractInfo.storagePath,
+    { sequence: false },
   );
   const marshaller = await E(board).getReadonlyMarshaller();
   const kreadPowers = { storageNode, marshaller };
@@ -416,9 +417,9 @@ const executeProposal = async (powers) => {
     clock,
     seed: 303,
   });
-  
+
   const privateArgs = harden({ powers: kreadPowers, ...kreadConfig });
-  
+
   const installation = await E(zoe).installBundleID(contractInfo.bundleID);
   const issuers = harden({ Money: istIssuer });
   const terms = harden({

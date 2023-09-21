@@ -161,28 +161,32 @@ export const ItemI = M.interface('item', {
   initializeBaseItems: M.call(M.arrayOf(ItemGuard)).returns(),
 });
 
-export const MarketRecorderGuard = M.splitRecord({
-  id: M.or(M.gte(0), M.string()),
-  askingPrice: M.splitRecord({
-    brand: BrandShape,
-    value: M.nat(),
+export const MarketRecorderGuard = M.or(
+  M.splitRecord({
+    id: M.or(M.gte(0), M.string()),
+    askingPrice: M.splitRecord({
+      brand: BrandShape,
+      value: M.nat(),
+    }),
+    royalty: M.splitRecord({
+      brand: BrandShape,
+      value: M.nat(),
+    }),
+    platformFee: M.splitRecord({
+      brand: BrandShape,
+      value: M.nat(),
+    }),
+    object: M.or(CharacterGuard, ItemGuard),
+    isFirstSale: M.boolean(),
+    // history: M.arrayOf(HistoryGuard),
   }),
-  royalty: M.splitRecord({
-    brand: BrandShape,
-    value: M.nat(),
-  }),
-  platformFee: M.splitRecord({
-    brand: BrandShape,
-    value: M.nat(),
-  }),
-  object: M.or(CharacterGuard, ItemGuard),
-  isFirstSale: M.boolean(),
-  // history: M.arrayOf(HistoryGuard),
-});
+  M.string(''),
+);
 
 export const MarketEntryGuard = M.splitRecord({
   id: M.or(M.gte(0), M.string()),
   seat: M.eref(M.remotable('Seat')),
+  recorderKit: M.record(), // TODO: figure out how to type recorderkits
   askingPrice: M.splitRecord({
     brand: BrandShape,
     value: M.nat(),
@@ -206,8 +210,10 @@ export const MarketI = M.interface('market', {
   buyItem: M.call().returns(M.promise()),
   buyFirstSaleItem: M.call().returns(M.promise()),
   buySecondarySaleItem: M.call().returns(M.promise()),
-  handleExitItem: M.call(MarketRecorderGuard).returns(),
-  handleExitCharacter: M.call(MarketRecorderGuard).returns(),
+  handleExitItem: M.call(MarketEntryGuard).returns(),
+  handleExitCharacter: M.call(MarketEntryGuard).returns(),
+  makeMarketItemRecorderKit: M.call(M.number()).returns(M.promise()),
+  makeMarketCharacterRecorderKit: M.call(M.string()).returns(M.promise()),
   sellCharacter: M.call().returns(M.promise()),
   buyCharacter: M.call().returns(M.promise()),
   updateMetrics: M.call(
