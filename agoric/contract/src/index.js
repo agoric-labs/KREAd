@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 // @ts-check
-import '@agoric/zoe/exported';
+import '@agoric/zoe/exported.js';
 
 import { AmountMath, AssetKind } from '@agoric/ertp';
 import { M } from '@agoric/store';
