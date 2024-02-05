@@ -48,8 +48,10 @@
     "@endo/init": "^0.5.56",
     "@endo/marshal": "^0.8.5",
     "@endo/patterns": "^0.2.2",
+    "@endo/promise-kit": "^0.2.56",
     "@endo/ses-ava": "^0.2.40",
-    "import-meta-resolve": "^2.2.1"
+    "import-meta-resolve": "^2.2.1",
+    "patch-package": "^6.5.1"
   },
   "ava": {
     "files": [

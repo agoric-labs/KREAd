@@ -55,7 +55,7 @@ export const bootstrapContext = async (conf = undefined) => {
   const installation = await E(zoe).install(contractBundle);
   const privateArgs = {
     powers: {
-      storageNode: makeMockChainStorageRoot().makeChildNode('thisElectorate'),
+      storageNode: makeMockChainStorageRoot({ sequence: false }).makeChildNode('thisElectorate'),
       marshaller: makeFakeBoard().getReadonlyMarshaller(),
     },
     clock: timerService.getClock(),
@@ -75,6 +75,16 @@ export const bootstrapContext = async (conf = undefined) => {
     }),
     minUncommonRating: 20,
   };
+
+  if (conf?.COUNT) {
+    const { COUNT } = conf;
+    const firstChar = defaultCharacters[0];
+    for (let i=0; i<COUNT-1; i++) {
+      const newChar = [firstChar[0]+i+1, {...firstChar[1]}];
+      defaultCharacters.push(newChar);
+    }
+    assert.equal(defaultCharacters.length, COUNT);
+  }
 
   // Start governed contract instance
   const { governorFacets } = await setUpGovernedContract(

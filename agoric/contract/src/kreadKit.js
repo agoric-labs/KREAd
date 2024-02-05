@@ -42,6 +42,12 @@ import { multiplyBy } from '@agoric/zoe/src/contractSupport/ratio.js';
 
 import '@agoric/zoe/exported.js';
 
+async function stall() {
+  for (let i=0; i < 40; i++) {
+    await null;
+  }
+}
+
 /**
  * this provides the exoClassKit for our upgradable KREAd contract
  * Utilizes capabilities from the prepare function suchs as mints
@@ -117,7 +123,7 @@ export const prepareKreadKit = (
   const marketItemNode = marketItemKit.recorder.getStorageNode();
   const marketCharacterNode = marketCharacterKit.recorder.getStorageNode();
 
-  const characterNode = characterKit.recorder.getStorageNode();
+  const characterNode = characterKit.recorder.getStorageNode(); // singleton with many children
 
   const characterShape = makeCopyBagAmountShape(
     characterBrand,
@@ -224,13 +230,17 @@ export const prepareKreadKit = (
           addAllToMap(characterState.bases, baseCharacters);
         },
         async makeInventoryRecorderKit(path) {
+          // makeChildNode() takes all the time here, the makeRecorderKit is trivial
+          console.time(`   makeInventoryRecorderKit.makeChildNode`);
           const node = await E(characterNode).makeChildNode(
             `inventory-${path}`,
           );
+          console.timeEnd(`   makeInventoryRecorderKit.makeChildNode`);
           return makeRecorderKit(node, M.arrayOf([ItemGuard, M.nat()]));
         },
         mint() {
           const handler = async (seat, offerArgs) => {
+            console.time(`  mint sync prelude`);
             const {
               helper,
               character: characterFacet,
@@ -238,7 +248,9 @@ export const prepareKreadKit = (
               market: marketFacet,
             } = this.facets;
 
+            console.time(`  state.character`);
             const { character: characterState } = this.state;
+            console.timeEnd(`  state.character`);
 
             const { give } = seat.getProposal();
             mustMatch(
@@ -254,8 +266,10 @@ export const prepareKreadKit = (
             AmountMath.isGTE(give.Price, mintFeeAmount) ||
               assert.fail(X`${errors.mintFeeTooLow}`);
 
+            console.time(`  check nameTaken`);
             !characterState.entries.get('names').includes(newCharacterName) ||
               assert.fail(X`${errors.nameTaken(newCharacterName)}`);
+            console.timeEnd(`  check nameTaken`);
 
             characterState.bases.getSize() > 0 ||
               assert.fail(X`${errors.allMinted}`);
@@ -264,11 +278,18 @@ export const prepareKreadKit = (
             (re.test(newCharacterName) && newCharacterName !== 'names') ||
               assert.fail(X`${errors.invalidName}`);
 
+            console.time(`  getRandomBaseIndex`);
             const baseIndex = characterFacet.getRandomBaseIndex();
+            console.timeEnd(`  getRandomBaseIndex`);
+            console.time(`  bases.get`);
             const baseCharacter = characterState.bases.get(baseIndex);
+            console.timeEnd(`  bases.get`);
 
+            console.time(`  bases.delete`);
             characterState.bases.delete(baseIndex);
+            console.timeEnd(`  bases.delete`);
 
+            console.time(`  characterState.entries.set`);
             characterState.entries.set(
               'names',
               harden([
@@ -276,12 +297,15 @@ export const prepareKreadKit = (
                 newCharacterName,
               ]),
             );
+            console.timeEnd(`  characterState.entries.set`);
 
+            console.timeEnd(`  mint sync prelude`);
             // for @jessie.js/safe-await-operator
             await null;
             try {
               const currentTime = await helper.getTimeStamp();
 
+              console.time(`  makeCharacterNftObjs`);
               const [newCharacterAmount1, newCharacterAmount2] =
                 makeCharacterNftObjs(
                   newCharacterName,
@@ -294,21 +318,48 @@ export const prepareKreadKit = (
                     makeCopyBag(harden([[character, 1n]])),
                   ),
                 );
+              console.timeEnd(`  makeCharacterNftObjs`);
 
+              console.time(`  make empty seats`);
               const { zcfSeat, userSeat } = zcf.makeEmptySeatKit();
-
               const { zcfSeat: inventorySeat } = zcf.makeEmptySeatKit();
+              console.timeEnd(`  make empty seats`);
+
+              console.time(`  characterMint.mintGains 1`);
               // Mint character to user seat & inventorySeat
-              characterMint.mintGains({ Asset: newCharacterAmount1 }, seat);
-              characterMint.mintGains(
+              await characterMint.mintGains({ Asset: newCharacterAmount1 }, seat);
+              // enques E(zoeMint).mintAndEscrow(), calls realllocate() which enqueuss
+              await stall(); // give zoe a chance to finish
+              console.timeEnd(`  characterMint.mintGains 1`);
+              console.time(`  characterMint.mintGains 2`);
+              await characterMint.mintGains(
                 { CharacterKey: newCharacterAmount2 },
                 inventorySeat,
               );
+              // enques E(zoeMint).mintAndEscrow(), calls realllocate() which enqueuss
+              await stall(); // give zoe a chance to finish
+              console.timeEnd(`  characterMint.mintGains 2`);
 
+              // current allocation:
+              //  user (`seat`): [their_payment, Asset: character_1]
+              //  `zcfSeat`/`userSeat`: []
+              //  `inventorySeat`: [CharacterKey: character_2]
+
+              console.time(`  makeInventoryRecorderKit`);
               const inventoryKit =
                 await characterFacet.makeInventoryRecorderKit(newCharacterName);
+              await stall(); // give zoe a chance to finish
+              console.timeEnd(`  makeInventoryRecorderKit`);
 
+              console.time(`  item.mintDefaultBatch`);
               await item.mintDefaultBatch(inventorySeat);
+              await stall(); // give zoe a chance to finish
+              console.timeEnd(`  item.mintDefaultBatch`);
+
+              // current allocation:
+              //  user (`seat`): [their_payment, Asset: character_1]
+              //  `zcfSeat`/`userSeat`: []
+              //  `inventorySeat`: [CharacterKey: character_2, three items]
 
               const royaltyFee = multiplyBy(give.Price, mintRoyaltyRate);
               const platformFee = multiplyBy(give.Price, mintPlatformFeeRate);
@@ -329,20 +380,53 @@ export const prepareKreadKit = (
               ]);
 
               try {
-                atomicRearrange(zcf, harden(transfers));
+                console.time(`  atomicRearrange`);
+                atomicRearrange(zcf, harden(transfers)); // enqueues message to zoe
+                console.timeEnd(`  atomicRearrange`);
               } catch (e) {
                 assert.fail(X`${errors.rearrangeError}`);
               }
+              await stall(); // give zoe a chance to finish
 
-              seat.exit();
-              zcfSeat.exit();
+              // current allocation:
+              //  user (`seat`): [Asset: character_1]
+              //  `zcfSeat`/`userSeat`: [ Royalty: fee, PlatformFee: fee]
+              //  `inventorySeat`: [CharacterKey: character_2, three items]
 
+              console.time(`  seat.exit()`);
+              seat.exit(); // enqueues message to zoe
+              await stall(); // give zoe a chance to finish
+              console.timeEnd(`  seat.exit()`);
+              console.time(`  zcfSeat.exit()`);
+              zcfSeat.exit(); // enqueues message to zoe
+              await stall(); // give zoe a chance to finish
+              console.timeEnd(`  zcfSeat.exit()`);
+
+              // current allocation:
+              //  user (`seat`) (Exited): [Asset: character_1]
+              //  `zcfSeat`/`userSeat` (exited): [ Royalty: fee, PlatformFee: fee]
+              //  `inventorySeat`: [CharacterKey: character_2, three items]
+
+              console.time(`  get royalty payouts`);
               const payouts = await E(userSeat).getPayouts();
+              await stall(); // give zoe a chance to finish
               const royaltyPayout = await payouts.Royalty;
               const platformFeePayout = await payouts.PlatformFee;
+              console.timeEnd(`  get royalty payouts`);
 
+              console.time(`  rx royalty payout`);
               await E(royaltyDepositFacet).receive(royaltyPayout);
+              await stall(); // give zoe a chance to finish
+              console.timeEnd(`  rx royalty payout`);
+              console.time(`  rx fee payout`);
               await E(platformFeeDepositFacet).receive(platformFeePayout);
+              await stall(); // give zoe a chance to finish
+              console.timeEnd(`  rx fee payout`);
+
+              // current allocation:
+              //  user (`seat`) (exited): [Asset: character_1]
+              //  `zcfSeat`/`userSeat` (exited): [] (fees deposited in depositFacets)
+              //  `inventorySeat`: [CharacterKey: character_2, three items]
 
               // Add to state
               const character = {
@@ -359,10 +443,14 @@ export const prepareKreadKit = (
                 ],
               };
 
+              console.time(`  addAllToMap(characterState.entries)`);
               addAllToMap(characterState.entries, [
                 [character.name, harden(character)],
               ]);
+              await stall(); // give zoe a chance to finish
+              console.timeEnd(`  addAllToMap(characterState.entries)`);
 
+              console.time(`  updateMetrics`);
               // update metrics
               marketFacet.updateMetrics('character', {
                 collectionSize: true,
@@ -371,16 +459,24 @@ export const prepareKreadKit = (
                   value: character.character.level,
                 },
               });
+              await stall(); // give zoe a chance to finish
+              console.timeEnd(`  updateMetrics`);
 
-              characterKit.recorder.write(
+              console.time(`  character recorder write`);
+              await characterKit.recorder.write(
                 // write `character` minus `seat` prop
                 (({ seat: _omitSeat, ...char }) => char)(character),
               );
+              await stall(); // give zoe a chance to finish
+              console.timeEnd(`  character recorder write`);
 
+              console.time(`  inventory recorder write`);
               // TODO: consider refactoring what we put in the inventory node
-              inventoryKit.recorder.write(
+              await inventoryKit.recorder.write(
                 inventorySeat.getAmountAllocated('Item').value.payload,
               );
+              await stall(); // give zoe a chance to finish
+              console.timeEnd(`  inventory recorder write`);
 
               return text.mintCharacterReturn;
             } catch (e) {
@@ -818,6 +914,7 @@ export const prepareKreadKit = (
           );
 
           await itemMint.mintGains({ Item: newItemAmount }, seat);
+          await stall();
 
           let id = itemState.entries.getSize();
 

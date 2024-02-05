@@ -1,0 +1,15 @@
+diff --git a/node_modules/@agoric/internal/src/storage-test-utils.js b/node_modules/@agoric/internal/src/storage-test-utils.js
+index bca49dd..a84c11d 100644
+--- a/node_modules/@agoric/internal/src/storage-test-utils.js
++++ b/node_modules/@agoric/internal/src/storage-test-utils.js
+@@ -206,8 +206,8 @@ export const makeFakeStorageKit = (rootPath, rootOptions) => {
+ harden(makeFakeStorageKit);
+ /** @typedef {ReturnType< typeof makeFakeStorageKit>} FakeStorageKit */
+ 
+-export const makeMockChainStorageRoot = () => {
+-  const { rootNode, data } = makeFakeStorageKit('mockChainStorageRoot');
++export const makeMockChainStorageRoot = (options={}) => {
++  const { rootNode, data } = makeFakeStorageKit('mockChainStorageRoot', options);
+   return Far('mockChainStorage', {
+     ...bindAllMethods(rootNode),
+     /**
